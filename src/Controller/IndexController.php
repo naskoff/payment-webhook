@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use Stripe\Stripe;
 use Stripe\Webhook;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,18 +30,17 @@ class IndexController extends AbstractController
      */
     public function stripe(Request $request): Response
     {
-        $payload = file_get_contents('php://input');
-        $secret = $this->getParameter('stripe_secret_key');
-        $signature = $request->headers->get('stripe-signature', null);
+        $secret = $this->getParameter('stripe_webhook_key');
+        $signature = $request->headers->get('stripe-signature');
 
-        var_dump([$payload, $signature]);
+        Stripe::setApiKey($this->getParameter('stripe_secret_key'));
 
         try {
-            $event = Webhook::constructEvent($payload, $signature, $secret);
+            $event = Webhook::constructEvent($request->getContent(), $signature, $secret);
         } catch (SignatureVerificationException $e) {
             throw new BadRequestException($e->getMessage());
         }
 
-        return new Response(print_r($event->object, true));
+        return new Response(print_r($event, true));
     }
 }
